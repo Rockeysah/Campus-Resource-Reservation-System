@@ -1,5 +1,7 @@
 #include "ReservationManager.h"
 #include <iostream>
+#include <fstream>
+#include <sstream> 
 
 using namespace std;
 
@@ -318,4 +320,109 @@ int ReservationManager::getReservationCount() const {
     }
 
     return count;
+}
+
+//Takes one line of text from the file and chops it into its separate pieces, 
+//using the | character as the cut point.
+static vector<string> splitLine(string line) {
+
+    vector<string> fields;
+    stringstream lineStream(line);
+    string field;
+
+    while (getline(lineStream, field, '|')) {
+        fields.push_back(field);
+    }
+
+    return fields;
+}
+
+// Format for loading resources: ResourceID|Name|Type|Status
+bool ReservationManager::loadResources(const string& filename, vector<Resource>& resources) {
+
+    ifstream file(filename);
+
+    if (!file) {
+        cout << "Error: Could not open " << filename << ".\n";
+        return false;
+    }
+
+    string line;
+    int loaded = 0;
+
+    while (getline(file, line)) {
+
+        vector<string> fields = splitLine(line);
+
+        if (fields.size() != 4) {
+            continue;   // line is either blank or does not follow the expected format
+        }
+
+        bool available = (fields[3] == "Available");
+
+        resources.push_back(
+            Resource(fields[0], fields[1], fields[2], available)
+        );
+
+        loaded++;
+    }
+
+    cout << "Loaded " << loaded << " resources from " << filename << ".\n";
+
+    return true;
+}
+
+// Format for loading reservations: ReservationID|StudentID|StudentName|ResourceID|Date
+// MAKE SURE THIS IS CALLED AFTER loadResources so resource IDs can be checked.
+bool ReservationManager::loadReservations(const string& filename, vector<Resource>& resources) {
+
+    ifstream file(filename);
+
+    if (!file) {
+        cout << "Error: Could not open " << filename << ".\n";
+        return false;
+    }
+
+    string line;
+    int loaded = 0;
+
+    while (getline(file, line)) {
+
+        vector<string> fields = splitLine(line);
+
+        if (fields.size() != 5) {
+            continue;   // line is either blank or does not follow the expected format
+        }
+
+        int reservationId = stoi(fields[0]);
+
+        // Make sure the resource exists, and count this booking,
+        // toward it for the most frequently reserved report.
+        bool resourceFound = false;
+
+        for (Resource& resource : resources) {
+
+            if (resource.getId() == fields[3]) {
+                resource.incrementTimesReserved();
+                resourceFound = true;
+                break;
+            }
+        }
+
+        if (!resourceFound) {
+            cout << "Skipped reservation " << reservationId << ": unknown resource " << fields[3] << ".\n";
+            continue;
+        }
+
+        Reservation reservation(reservationId, fields[1], fields[2], fields[3], fields[4]);
+
+        // insertReservation already rejects duplicate IDs.
+        if (insertReservation(reservation)) {
+            loaded++;
+        }
+    }
+
+    cout << "Loaded " << loaded << " reservations from " << filename << ".\n";
+
+    return true;
 }
