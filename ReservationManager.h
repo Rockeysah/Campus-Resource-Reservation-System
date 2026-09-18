@@ -25,6 +25,17 @@ public:
     ReservationManager();
     ~ReservationManager();
 
+    //Michael Elsen: Add File Loading to header
+    bool loadResources(
+        const string& filename,
+        vector<Resource>& resources
+    );
+ 
+    bool loadReservations(
+        const string& filename,
+        vector<Resource>& resources
+    );
+
     bool insertReservation(const Reservation& reservation);
 
     bool removeReservation(int reservationId);
