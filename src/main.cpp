@@ -182,14 +182,17 @@ int main() {
         cout << "9. Exit\n";
         cout << "Enter your choice: ";
 
-        cin >> choice;
+        
 
-        if (!(cin >> choice)) {
+     if (!(cin >> choice)) {
     cin.clear();
     cin.ignore(10000, '\n');
     cout << "Invalid choice. Please enter a number from 1 to 9.\n";
     continue;
 }
+       if (choice == 1) {
+    displayResources(resources);
+       }
 
         else if (choice == 2) {
 
