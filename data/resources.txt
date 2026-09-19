@@ -1,0 +1,6 @@
+R101,Study Room 101,Study Room,Available
+R102,Study Room 102,Study Room,Available
+R103,Study Room 103,Study Room,Available
+L201,Laptop 201,Laptop,Available
+L202,Laptop 202,Laptop,Available
+P301,Projector 301,Projector,Available
