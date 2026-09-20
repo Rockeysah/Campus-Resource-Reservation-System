@@ -8,11 +8,16 @@ using namespace std;
 class Resource {
 public:
     Resource();
-    Resource(const string& id, const string& name, const string& type, bool available);
+
+    Resource(const string& id,
+             const string& name,
+             const string& type,
+             bool available);
 
     const string& getId() const;
     const string& getName() const;
     const string& getType() const;
+
     bool isAvailable() const;
     int getTimesReserved() const;
 

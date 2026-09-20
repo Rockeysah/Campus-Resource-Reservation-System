@@ -1,65 +1,78 @@
 #ifndef RESERVATION_MANAGER_H
 #define RESERVATION_MANAGER_H
 
-#include "Reservation.h"
 #include "Resource.h"
-#include <vector>
+#include "Reservation.h"
 #include <string>
+#include <vector>
+#include <queue>
+#include <stack>
 
 using namespace std;
 
 class ReservationManager {
 private:
-    struct Node {
-        Reservation reservation;
-        Node* next;
+    vector<Resource> resources;
 
-        Node(const Reservation& reservation);
+    struct ReservationNode {
+        Reservation reservation;
+        ReservationNode* next;
+
+        ReservationNode(const Reservation& r)
+            : reservation(r), next(nullptr) {}
     };
 
-    Node* head;
+    ReservationNode* reservationHead;
 
-    bool reservationIdExists(int reservationId) const;
+    struct WaitingRequest {
+        string studentId;
+        string studentName;
+        string resourceId;
+        string date;
+    };
+
+    queue<WaitingRequest> waitingQueue;
+    stack<Reservation> cancellationHistory;
+
+    Resource* findResource(const string& id);
+    ReservationNode* findReservationNode(int id) const;
+
+    bool studentHasReservation(const string& studentId,
+                               const string& resourceId) const;
+
+    void deleteAllNodes();
 
 public:
     ReservationManager();
     ~ReservationManager();
 
-    bool insertReservation(const Reservation& reservation);
-
-    bool removeReservation(int reservationId);
-
-    Reservation* findReservation(int reservationId);
-
+    bool loadResources(const string& filename);
+    bool loadReservations(const string& filename);
+    void displayResources() const;
+    void displayAvailability() const;
     void displayReservations() const;
 
-    bool validateReservation(
-        int reservationId,
-        const string& studentId,
-        const string& studentName,
-        const string& resourceId,
-        const string& date,
-        const vector<Resource>& resources
-    ) const;
+    bool createReservation(int reservationId,
+                           const string& studentId,
+                           const string& studentName,
+                           const string& resourceId,
+                           const string& date);
 
-    bool createReservation(
-        int reservationId,
-        const string& studentId,
-        const string& studentName,
-        const string& resourceId,
-        const string& date,
-        vector<Resource>& resources
-    );
+    bool cancelReservation(int reservationId);
 
-    bool cancelReservation(
-        int reservationId,
-        vector<Resource>& resources,
-        Reservation& cancelledReservation
-    );
+    void addToWaitingList(const string& studentId,
+                          const string& studentName,
+                          const string& resourceId,
+                          const string& date);
 
-    bool isEmpty() const;
+    bool processNextWaitingRequest();
+    bool undoLastCancellation();
 
-    int getReservationCount() const;
+    void displayWaitingList() const;
+    void displayCancellationHistory() const;
+
+    bool reservationExists(int id) const;
+    int activeReservationCount() const;
 };
 
 #endif
