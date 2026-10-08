@@ -2,8 +2,9 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
- 
+
 using namespace std;
+
 ReservationManager::ReservationManager()
     : reservationHead(nullptr) {
 }
@@ -43,6 +44,48 @@ ReservationManager::findReservationNode(int id) const {
     }
 
     return nullptr;
+}
+
+bool ReservationManager::reservationExists(int id) const {
+    return findReservationNode(id) != nullptr;
+}
+
+bool ReservationManager::reservationIdInCancellationHistory(int id) const {
+    auto history = cancellationHistory;
+
+    while (!history.empty()) {
+        if (history.top().getReservationId() == id) {
+            return true;
+        }
+
+        history.pop();
+    }
+
+    return false;
+}
+
+int ReservationManager::generateNextReservationId() const {
+    int highestId = 0;
+
+    // Check active reservations
+    for (auto* c = reservationHead; c; c = c->next) {
+        if (c->reservation.getReservationId() > highestId) {
+            highestId = c->reservation.getReservationId();
+        }
+    }
+
+    // Check cancelled reservations
+    auto history = cancellationHistory;
+
+    while (!history.empty()) {
+        if (history.top().getReservationId() > highestId) {
+            highestId = history.top().getReservationId();
+        }
+
+        history.pop();
+    }
+
+    return highestId + 1;
 }
 
 bool ReservationManager::studentHasReservation(
@@ -192,10 +235,6 @@ void ReservationManager::displayReservations() const {
     }
 }
 
-bool ReservationManager::reservationExists(int id) const {
-    return findReservationNode(id) != nullptr;
-}
-
 int ReservationManager::activeReservationCount() const {
     int n = 0;
 
@@ -219,8 +258,11 @@ bool ReservationManager::createReservation(
         return false;
     }
 
-    if (reservationExists(id)) {
-        cout << "Reservation ID already exists.\n";
+    // Prevent duplicate IDs in active reservations
+    // and in cancellation history.
+    if (reservationExists(id) ||
+        reservationIdInCancellationHistory(id)) {
+        cout << "Reservation ID is already in use.\n";
         return false;
     }
 
@@ -294,14 +336,17 @@ bool ReservationManager::cancelReservation(int id) {
 
     delete c;
 
+    // Store cancelled reservation in the stack.
     cancellationHistory.push(x);
 
+    // Make the resource available.
     if (auto* res = findResource(x.getResourceId())) {
         res->setAvailable(true);
     }
 
     cout << "Reservation cancelled and saved in cancellation history.\n";
 
+    // Try to process an available waiting request.
     processNextWaitingRequest();
 
     return true;
@@ -323,29 +368,59 @@ bool ReservationManager::processNextWaitingRequest() {
         return false;
     }
 
-    auto q = waitingQueue.front();
+    queue<WaitingRequest> remainingQueue;
 
-    auto* res = findResource(q.resourceId);
+    WaitingRequest selectedRequest;
+    bool foundAvailableRequest = false;
 
-    if (!res || !res->isAvailable()) {
+    size_t numberOfRequests = waitingQueue.size();
+
+    // Check all waiting requests so that an unavailable
+    // resource at the front does not block requests
+    // for other available resources.
+    for (size_t i = 0; i < numberOfRequests; ++i) {
+        WaitingRequest request = waitingQueue.front();
+        waitingQueue.pop();
+
+        Resource* resource = findResource(request.resourceId);
+
+        if (!foundAvailableRequest &&
+            resource != nullptr &&
+            resource->isAvailable()) {
+
+            selectedRequest = request;
+            foundAvailableRequest = true;
+        }
+        else {
+            remainingQueue.push(request);
+        }
+    }
+
+    waitingQueue = remainingQueue;
+
+    if (!foundAvailableRequest) {
         return false;
     }
 
-    int id = 1;
+    // Generate an ID that is not already active
+    // and is not in cancellation history.
+    int id = generateNextReservationId();
 
-    while (reservationExists(id)) {
-        ++id;
+    if (createReservation(
+            id,
+            selectedRequest.studentId,
+            selectedRequest.studentName,
+            selectedRequest.resourceId,
+            selectedRequest.date)) {
+
+        return true;
     }
 
-    waitingQueue.pop();
+    // If creation fails, put the request back
+    // into the waiting queue.
+    waitingQueue.push(selectedRequest);
 
-    return createReservation(
-        id,
-        q.studentId,
-        q.studentName,
-        q.resourceId,
-        q.date
-    );
+    return false;
 }
 
 bool ReservationManager::undoLastCancellation() {
@@ -356,13 +431,26 @@ bool ReservationManager::undoLastCancellation() {
 
     Reservation x = cancellationHistory.top();
 
+    // Prevent duplicate reservation IDs during undo.
+    if (reservationExists(x.getReservationId())) {
+        cout << "Cannot undo: reservation ID already exists.\n";
+        return false;
+    }
+
     auto* res = findResource(x.getResourceId());
 
-    if (!res || !res->isAvailable()) {
+    if (!res) {
+        cout << "Cannot undo: resource not found.\n";
+        return false;
+    }
+
+    if (!res->isAvailable()) {
         cout << "Cannot restore: resource is unavailable.\n";
         return false;
     }
 
+    // Remove the reservation from cancellation history
+    // only after all validation succeeds.
     cancellationHistory.pop();
 
     auto* node = new ReservationNode(x);

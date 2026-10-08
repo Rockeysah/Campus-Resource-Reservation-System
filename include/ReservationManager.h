@@ -34,11 +34,14 @@ private:
     queue<WaitingRequest> waitingQueue;
     stack<Reservation> cancellationHistory;
 
-    Resource* findResource(const string& id);
+        Resource* findResource(const string& id);
     ReservationNode* findReservationNode(int id) const;
 
     bool studentHasReservation(const string& studentId,
                                const string& resourceId) const;
+
+    bool reservationIdInCancellationHistory(int id) const;
+    int generateNextReservationId() const;
 
     void deleteAllNodes();
 
