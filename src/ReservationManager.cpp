@@ -519,3 +519,224 @@ void ReservationManager::displayCancellationHistory() const {
         s.pop();
     }
 }
+// The following features are added without changing the existing
+// reservation, cancellation, waiting-list, or undo implementations.
+
+void ReservationManager::searchResourceById() const {
+    string id;
+    cout << "Enter Resource ID: ";
+    cin >> id;
+
+    // Linear search through the resources.
+    for (const auto& resource : resources) {
+        if (resource.getId() == id) {
+            cout << "\nResource found:\n";
+            Resource::printHeader();
+            resource.print();
+            return;
+        }
+    }
+    cout << "Resource ID not found.\n";
+}
+
+void ReservationManager::searchReservationOrStudent() const {
+    int choice;
+    cout << "1. Search by Reservation ID\n";
+    cout << "2. Search by Student ID\n";
+    cout << "Choice: ";
+    if (!(cin >> choice)) {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "Invalid choice.\n";
+        return;
+    }
+
+    if (choice == 1) {
+        int id;
+        cout << "Enter Reservation ID: ";
+        if (!(cin >> id)) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Invalid reservation ID.\n";
+            return;
+        }
+        for (auto* node = reservationHead; node; node = node->next) {
+            if (node->reservation.getReservationId() == id) {
+                cout << "\nReservation found:\n";
+                Reservation::printHeader();
+                node->reservation.print();
+                return;
+            }
+        }
+        cout << "Reservation ID not found.\n";
+    } else if (choice == 2) {
+        string studentId;
+        cout << "Enter Student ID: ";
+        cin >> studentId;
+        bool found = false;
+        for (auto* node = reservationHead; node; node = node->next) {
+            if (node->reservation.getStudentId() == studentId) {
+                if (!found) Reservation::printHeader();
+                node->reservation.print();
+                found = true;
+            }
+        }
+        if (!found) cout << "No active reservations found for that student.\n";
+    } else {
+        cout << "Invalid choice.\n";
+    }
+}
+
+void ReservationManager::sortResourcesByName() const {
+    vector<Resource> sorted = resources;
+    if (sorted.empty()) {
+        cout << "No resources loaded.\n";
+        return;
+    }
+
+    // Quick Sort: partition resources by name, then sort each partition.
+    auto quickSort = [&](auto&& self, int low, int high) -> void {
+        if (low >= high) return;
+        int i = low;
+        int j = high;
+        string pivot = sorted[low + (high - low) / 2].getName();
+        while (i <= j) {
+            while (sorted[i].getName() < pivot) ++i;
+            while (sorted[j].getName() > pivot) --j;
+            if (i <= j) {
+                Resource temp = sorted[i];
+                sorted[i] = sorted[j];
+                sorted[j] = temp;
+                ++i;
+                --j;
+            }
+        }
+        if (low < j) self(self, low, j);
+        if (i < high) self(self, i, high);
+    };
+    quickSort(quickSort, 0, static_cast<int>(sorted.size()) - 1);
+
+    cout << "\nResources sorted by name (Quick Sort):\n";
+    Resource::printHeader();
+    for (const auto& resource : sorted) resource.print();
+}
+
+void ReservationManager::sortResourcesByPopularity() const {
+    vector<Resource> sorted = resources;
+    if (sorted.empty()) {
+        cout << "No resources loaded.\n";
+        return;
+    }
+
+    // Quick Sort by recorded reservation count, highest count first.
+    auto quickSort = [&](auto&& self, int low, int high) -> void {
+        if (low >= high) return;
+        int i = low;
+        int j = high;
+        int pivot = sorted[low + (high - low) / 2].getTimesReserved();
+        while (i <= j) {
+            while (sorted[i].getTimesReserved() > pivot) ++i;
+            while (sorted[j].getTimesReserved() < pivot) --j;
+            if (i <= j) {
+                Resource temp = sorted[i];
+                sorted[i] = sorted[j];
+                sorted[j] = temp;
+                ++i;
+                --j;
+            }
+        }
+        if (low < j) self(self, low, j);
+        if (i < high) self(self, i, high);
+    };
+    quickSort(quickSort, 0, static_cast<int>(sorted.size()) - 1);
+
+    cout << "\nResources sorted by reservation count (Quick Sort):\n";
+    Resource::printHeader();
+    for (const auto& resource : sorted) {
+        resource.print();
+        cout << "  Times reserved: " << resource.getTimesReserved() << "\n";
+    }
+}
+
+void ReservationManager::sortReservationsByDate() const {
+    vector<Reservation> sorted;
+    for (auto* node = reservationHead; node; node = node->next) {
+        sorted.push_back(node->reservation);
+    }
+    if (sorted.empty()) {
+        cout << "No active reservations.\n";
+        return;
+    }
+
+    // Quick Sort by date, ascending. Original linked list remains unchanged.
+    auto quickSort = [&](auto&& self, int low, int high) -> void {
+        if (low >= high) return;
+        int i = low;
+        int j = high;
+        string pivot = sorted[low + (high - low) / 2].getDate();
+        while (i <= j) {
+            while (sorted[i].getDate() < pivot) ++i;
+            while (sorted[j].getDate() > pivot) --j;
+            if (i <= j) {
+                Reservation temp = sorted[i];
+                sorted[i] = sorted[j];
+                sorted[j] = temp;
+                ++i;
+                --j;
+            }
+        }
+        if (low < j) self(self, low, j);
+        if (i < high) self(self, i, high);
+    };
+    quickSort(quickSort, 0, static_cast<int>(sorted.size()) - 1);
+
+    cout << "\nReservations sorted by date (Quick Sort):\n";
+    Reservation::printHeader();
+    for (const auto& reservation : sorted) reservation.print();
+}
+
+void ReservationManager::reportActiveReservations() const {
+    cout << "\nActive Reservations: " << activeReservationCount() << "\n";
+    displayReservations();
+}
+
+void ReservationManager::reportResourceUtilization() const {
+    cout << "\nResource Utilization / Reservation Counts\n";
+    if (resources.empty()) { cout << "No resources loaded.\n"; return; }
+    for (const auto& resource : resources) {
+        cout << resource.getId() << " - " << resource.getName()
+             << ": " << resource.getTimesReserved() << " reservation(s) recorded; "
+             << (resource.isAvailable() ? "Available" : "Unavailable") << "\n";
+    }
+}
+
+void ReservationManager::reportMostRequestedResource() const {
+    if (resources.empty()) { cout << "No resources loaded.\n"; return; }
+    const Resource* mostRequested = &resources[0];
+    for (const auto& resource : resources) {
+        if (resource.getTimesReserved() > mostRequested->getTimesReserved())
+            mostRequested = &resource;
+    }
+    cout << "\nMost requested resource (based on recorded reservation count):\n"
+         << mostRequested->getId() << " - " << mostRequested->getName()
+         << " (" << mostRequested->getTimesReserved() << " reservation(s))\n";
+}
+
+void ReservationManager::reportWaitingListStatistics() const {
+    auto copy = waitingQueue;
+    cout << "\nWaiting-list requests: " << copy.size() << "\n";
+    if (copy.empty()) { cout << "No students are currently waiting.\n"; return; }
+    while (!copy.empty()) {
+        const auto request = copy.front();
+        cout << "Resource " << request.resourceId << ": Student "
+             << request.studentId << " (" << request.studentName << ")\n";
+        copy.pop();
+    }
+}
+
+void ReservationManager::reportFullSummary() const {
+    reportActiveReservations();
+    reportResourceUtilization();
+    reportMostRequestedResource();
+    reportWaitingListStatistics();
+}
