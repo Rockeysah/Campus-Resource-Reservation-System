@@ -204,6 +204,32 @@ bool ReservationManager::loadReservations(const string& f) {
 
     return true;
 }
+// Add your new saveReservations function here
+
+bool ReservationManager::saveReservations(const string& filename) const {
+    ofstream file(filename);
+
+    if (!file) {
+        return false;
+    }
+
+    ReservationNode* current = reservationHead;
+
+    while (current != nullptr) {
+        const Reservation& r = current->reservation;
+
+        file << r.getReservationId() << ","
+             << r.getStudentId() << ","
+             << r.getStudentName() << ","
+             << r.getResourceId() << ","
+             << r.getDate() << "\n";
+
+        current = current->next;
+    }
+
+    return file.good();
+}
+
 
 void ReservationManager::displayResources() const {
     if (resources.empty()) {
@@ -306,6 +332,7 @@ bool ReservationManager::createReservation(
     res->incrementTimesReserved();
 
     cout << "Reservation created successfully.\n";
+    saveReservations("data/reservations.txt");
 
     return true;
 }
@@ -348,6 +375,7 @@ bool ReservationManager::cancelReservation(int id) {
 
     // Try to process an available waiting request.
     processNextWaitingRequest();
+    saveReservations("data/reservations.txt");
 
     return true;
 }
@@ -471,6 +499,8 @@ bool ReservationManager::undoLastCancellation() {
     res->setAvailable(false);
 
     cout << "Most recent cancellation restored.\n";
+    saveReservations("data/reservations.txt");
+
 
     return true;
 }

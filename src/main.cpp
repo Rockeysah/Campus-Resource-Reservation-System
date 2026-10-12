@@ -130,8 +130,11 @@ int main() {
                 else if (option != 0) cout << "Invalid choice.\n";
             } while (option != 0);
         } else if (c == 9) {
-            cout << "Goodbye!\n";
-        } else {
+    if (!m.saveReservations("data/reservations.txt")) {
+        cout << "Error: Could not save reservations.\n";
+    }
+    cout << "Goodbye!\n";
+} else {
             cout << "Invalid choice.\n";
         }
     } while (c != 9);

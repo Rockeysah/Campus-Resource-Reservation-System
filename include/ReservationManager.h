@@ -51,6 +51,7 @@ public:
 
     bool loadResources(const string& filename);
     bool loadReservations(const string& filename);
+    bool saveReservations(const string& filename) const;
     void displayResources() const;
     void displayAvailability() const;
     void displayReservations() const;
