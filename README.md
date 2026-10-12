@@ -23,6 +23,5 @@ Campus-Resource-Reservation-System/
 │   ├── Resource.cpp
 │   ├── Reservation.cpp
 │   └── ReservationManager.cpp
-├── Complexity_Analysis.md
 ├── Contribution_Report.md
 └── README.md
