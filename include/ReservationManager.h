@@ -34,11 +34,14 @@ private:
     queue<WaitingRequest> waitingQueue;
     stack<Reservation> cancellationHistory;
 
-    Resource* findResource(const string& id);
+        Resource* findResource(const string& id);
     ReservationNode* findReservationNode(int id) const;
 
     bool studentHasReservation(const string& studentId,
                                const string& resourceId) const;
+
+    bool reservationIdInCancellationHistory(int id) const;
+    int generateNextReservationId() const;
 
     void deleteAllNodes();
 
@@ -48,6 +51,7 @@ public:
 
     bool loadResources(const string& filename);
     bool loadReservations(const string& filename);
+    bool saveReservations(const string& filename) const;
     void displayResources() const;
     void displayAvailability() const;
     void displayReservations() const;
@@ -73,6 +77,18 @@ public:
 
     bool reservationExists(int id) const;
     int activeReservationCount() const;
+
+    // Added search, sorting, and reporting features.
+    void searchResourceById() const;
+    void searchReservationOrStudent() const;
+    void sortResourcesByName() const;
+    void sortResourcesByPopularity() const;
+    void sortReservationsByDate() const;
+    void reportActiveReservations() const;
+    void reportResourceUtilization() const;
+    void reportMostRequestedResource() const;
+    void reportWaitingListStatistics() const;
+    void reportFullSummary() const;
 };
 
 #endif
